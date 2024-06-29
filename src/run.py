@@ -54,6 +54,11 @@ print(f"aml_job_instance_count={aml_job_instance_count}")
 print(f"aml_job_input_datastore={aml_job_input_datastore}")
 print(f"aml_job_output_datastore={aml_job_output_datastore}")
 
+job_key_vault_name = os.getenv("JOB_KEY_VAULT_NAME")
+managed_identity_id = os.getenv("JOB_MANAGED_IDENTITY_ID")
+print(f"job_key_vault_name={job_key_vault_name}")
+print(f"managed_identity_id={managed_identity_id}")
+
 default_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
 
 # connect to the workspace
@@ -105,6 +110,9 @@ batch_job = parallel_run_function(
     retry_settings=dict(max_retries=3, timeout=60),
     logging_level=aml_log_level,
     is_deterministic=False,
+    environment_variables=dict(
+        KEY_VAULT_NAME=job_key_vault_name, MANAGED_IDENTITY_ID=managed_identity_id
+    ),
     task=RunFunction(
         code="code",
         entry_script="run_job.py",

@@ -1,9 +1,13 @@
 param (
-    [string]$prefix = "amlparallelrun",
+    [Parameter(Mandatory = $true)][string]$prefix,
     [string]$location = "eastus"
 )
 
 $ErrorActionPreference = "Stop"
+
+if (!$prefix) {
+    throw "Prefix is required."
+}
 
 $groupName = $prefix
 If (-Not [bool]((az group exists -n $groupName) -eq 'true')) { az group create --name $groupName --location $location }
@@ -36,6 +40,15 @@ $amlJobInputDatastore = $output.properties.outputs.aml_job_input_datastore.value
 $amlJobOutputDatastore = $output.properties.outputs.aml_job_output_datastore.value
 $uploadContainerName = $output.properties.outputs.upload_container_name.value
 $uploadStorageUrl = $output.properties.outputs.upload_storage_url.value
+$keyVaultName = $output.properties.outputs.key_vault_name.value
+$managedIdentityId = $output.properties.outputs.managed_identity_id.value
+
+# Shows we can access Azure Key Vault from the AML Job
+$secretKey1 = [guid]::NewGuid().ToString()
+az keyvault secret set --vault-name $keyVaultName --name "SecretKey1" --value $secretKey1
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to configure secret to in Azure Key Vault."
+}
 
 # Allow AzureML to access the storage account
 az storage account network-rule add --account-name $output.properties.outputs.aml_storage_name.value `
@@ -51,6 +64,7 @@ az ml workspace update --name $amlWorkspaceName --resource-group $groupName --im
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to configure AzureML to use compute $amlComputeName."
 }
+
 # env file
 # Create a new instance of StringBuilder
 $stringBuilder = New-Object System.Text.StringBuilder
@@ -70,6 +84,8 @@ if ($LASTEXITCODE -ne 0) {
 [void]$stringBuilder.AppendLine("AML_JOB_INSTANCE_COUNT=1")
 [void]$stringBuilder.AppendLine("AML_JOB_INPUT_DATASTORE=$amlJobInputDatastore")
 [void]$stringBuilder.AppendLine("AML_JOB_OUTPUT_DATASTORE=$amlJobOutputDatastore")
+[void]$stringBuilder.AppendLine("JOB_KEY_VAULT_NAME=$keyVaultName") # This is set as an environment variable in the AML Job
+[void]$stringBuilder.AppendLine("JOB_MANAGED_IDENTITY_ID=$managedIdentityId")
 [void]$stringBuilder.AppendLine("UPLOAD_CONTAINER_NAME=$uploadContainerName")
 [void]$stringBuilder.AppendLine("UPLOAD_STORAGE_URL=$uploadStorageUrl")
 

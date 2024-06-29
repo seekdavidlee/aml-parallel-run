@@ -108,7 +108,7 @@ resource storage_account 'Microsoft.Storage/storageAccounts@2023-05-01' = {
           action: 'Allow'
         }
       ]
-      bypass: 'AzureServices'
+      bypass: 'None' // This is not required because we will be creating a network rule and specifically assigning AML to storage for access
       defaultAction: 'Deny'
     }
   }
@@ -249,14 +249,14 @@ resource keyvaultsecretsuser_role_assignment 'Microsoft.Authorization/roleAssign
   }
 }
 
-resource keyvaultsecretsuser_user_role_assignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(subscription().subscriptionId, user_object_id, 'KeyVaultSecretsUser')
+resource keyvaultsecretsofficer_user_role_assignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(subscription().subscriptionId, user_object_id, 'KeyVaultSecretsOfficer')
   scope: key_vault
   properties: {
     principalId: user_object_id
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      '4633458b-17de-408a-b874-0445c86b69e6'
+      'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
     )
   }
 }
@@ -539,7 +539,7 @@ resource aml_compute_cluster 'Microsoft.MachineLearningServices/workspaces/compu
       scaleSettings: {
         minNodeCount: 0
         maxNodeCount: 3
-        nodeIdleTimeBeforeScaleDown: 'PT3600S' // shut down after 1 hour of inactivity
+        nodeIdleTimeBeforeScaleDown: 'PT900S' // shut down after 15 mins of inactivity
       }
       subnet: {
         id: vnet.properties.subnets[2].id
@@ -561,3 +561,5 @@ output aml_job_input_datastore string = aml_workspace_input_datastore.name
 output aml_job_output_datastore string = aml_workspace_output_datastore.name
 output upload_container_name string = storage_container_job_input.name
 output upload_storage_url string = storage_account.properties.primaryEndpoints.blob
+output key_vault_name string = key_vault.name
+output managed_identity_id string = managed_identity.properties.clientId
