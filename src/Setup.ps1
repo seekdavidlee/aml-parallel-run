@@ -1,7 +1,10 @@
+param (
+    [string]$prefix = "amlparallelrun",
+    [string]$groupName = "aml-parallel-run",
+    [string]$location = "eastus"
+)
+
 $ErrorActionPreference = "Stop"
-$prefix = "amlparallelrun"
-$groupName = "aml-parallel-run"
-$location = "eastus"
 
 If (-Not [bool]((az group exists -n $groupName) -eq 'true')) { az group create --name $groupName --location $location }
 if ($LASTEXITCODE -ne 0) {

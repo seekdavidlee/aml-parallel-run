@@ -10,9 +10,7 @@ from azure.ai.ml.entities import Environment
 from azure.ai.ml.dsl import pipeline
 import argparse
 
-parser = argparse.ArgumentParser(
-    allow_abbrev=True, description="Run pipeline"
-)
+parser = argparse.ArgumentParser(allow_abbrev=True, description="Run pipeline")
 parser.add_argument("--env_path", type=str, default=0)
 
 args, _ = parser.parse_known_args()
@@ -23,7 +21,7 @@ if env_path == 0:
 
 print(f"env_path: {env_path}")
 dotenv_path = Path(env_path)
-load_dotenv(dotenv_path=dotenv_path)
+load_dotenv(dotenv_path=dotenv_path, override=True)
 
 aml_subscription_id = os.getenv("AML_SUBSCRIPTION_ID")
 aml_resource_group_name = os.getenv("AML_RESOURCE_GROUP_NAME")
@@ -75,7 +73,9 @@ env = Environment(
 
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 job_input_path = f"azureml://datastores/{aml_job_input_datastore}/paths/"
-job_output_path = f"azureml://datastores/{aml_job_output_datastore}/paths/{timestamp}/job"
+job_output_path = (
+    f"azureml://datastores/{aml_job_output_datastore}/paths/{timestamp}/job"
+)
 job_suffix = f"{aml_experiment_name}_{timestamp}"
 
 batch_job = parallel_run_function(
@@ -114,6 +114,7 @@ batch_job = parallel_run_function(
     ),
 )
 
+
 @pipeline(name=timestamp, display_name=f"Job {timestamp}")
 def parallel_in_pipeline():
 
@@ -122,6 +123,7 @@ def parallel_in_pipeline():
     return {
         "pipeline_job_out_job_result": batch_job_with_file_data.outputs.job_output_path,
     }
+
 
 # create a pipeline
 pipeline_job = parallel_in_pipeline()
