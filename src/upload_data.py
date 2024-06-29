@@ -7,9 +7,12 @@ from dotenv import load_dotenv
 directory_path = "../data"
 
 dotenv_path = Path("./.env")
-load_dotenv(dotenv_path=dotenv_path)
+load_dotenv(dotenv_path=dotenv_path, override=True)
 container_name = os.getenv("UPLOAD_CONTAINER_NAME")
 storage_url = os.getenv("UPLOAD_STORAGE_URL")
+
+print(f"UPLOAD_CONTAINER_NAME={container_name}")
+print(f"UPLOAD_STORAGE_URL={storage_url}")
 
 default_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
 blob_service_client = BlobServiceClient(

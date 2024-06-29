@@ -8,7 +8,19 @@ var subnets = [
   'resources'
   'aml'
 ]
+
 var vnet_name = '${prefix}-vnet'
+
+resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-11-01' = [
+  for subnetName in subnets: {
+    name: '${vnet_name}-${subnetName}-nsg'
+    location: location
+    properties: {
+      securityRules: []
+    }
+  }
+]
+
 resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: vnet_name
   location: location
@@ -24,6 +36,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         properties: {
           addressPrefix: '10.0.${i}.0/24'
           privateEndpointNetworkPolicies: (subnetName == 'resources') ? 'NetworkSecurityGroupEnabled' : 'Disabled'
+          networkSecurityGroup: {
+            id: nsgs[i].id
+          }
           delegations: (subnetName == 'aml')
             ? [
                 {
@@ -93,7 +108,7 @@ resource storage_account 'Microsoft.Storage/storageAccounts@2023-05-01' = {
           action: 'Allow'
         }
       ]
-      bypass: 'AzureServices'
+      bypass: 'None' // This is not required because we will be creating a network rule and specifically assigning AML to storage for access
       defaultAction: 'Deny'
     }
   }
@@ -234,14 +249,14 @@ resource keyvaultsecretsuser_role_assignment 'Microsoft.Authorization/roleAssign
   }
 }
 
-resource keyvaultsecretsuser_user_role_assignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(subscription().subscriptionId, user_object_id, 'KeyVaultSecretsUser')
+resource keyvaultsecretsofficer_user_role_assignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(subscription().subscriptionId, user_object_id, 'KeyVaultSecretsOfficer')
   scope: key_vault
   properties: {
     principalId: user_object_id
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      '4633458b-17de-408a-b874-0445c86b69e6'
+      'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
     )
   }
 }
@@ -446,7 +461,7 @@ resource storageblobdatacontributor_user_role_assignment 'Microsoft.Authorizatio
 
 // create aml workspace
 resource aml_workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
-  name: prefix
+  name: '${prefix}-aml'
   location: location
   sku: {
     name: 'Basic'
@@ -456,10 +471,11 @@ resource aml_workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01'
     type: 'SystemAssigned'
   }
   properties: {
+    publicNetworkAccess: 'Enabled'
     friendlyName: prefix
     applicationInsights: app_insights.id
     containerRegistry: container_registry.id
-    description: 'Azure Machine Learning workspace'
+    description: 'Azure Machine Learning workspace for running parallel jobs'
     keyVault: key_vault.id
     storageAccount: storage_account.id
     managedNetwork: {
@@ -468,18 +484,6 @@ resource aml_workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01'
     enableDataIsolation: false
   }
 }
-
-// resource storageblobdatacontributor_aml_role_assignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-//   name: guid(subscription().subscriptionId, aml_workspace.name, 'StorageBlobDataContributor')
-//   scope: storage_account
-//   properties: {
-//     principalId: aml_workspace.identity.principalId
-//     roleDefinitionId: subscriptionResourceId(
-//       'Microsoft.Authorization/roleDefinitions',
-//       'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-//     )
-//   }
-// }
 
 // create aml workspace datasource
 resource aml_workspace_input_datastore 'Microsoft.MachineLearningServices/workspaces/datastores@2024-04-01' = {
@@ -534,14 +538,15 @@ resource aml_compute_cluster 'Microsoft.MachineLearningServices/workspaces/compu
     properties: {
       scaleSettings: {
         minNodeCount: 0
-        maxNodeCount: 1
-        nodeIdleTimeBeforeScaleDown: 'PT120S'
+        maxNodeCount: 3
+        nodeIdleTimeBeforeScaleDown: 'PT900S' // shut down after 15 mins of inactivity
       }
       subnet: {
         id: vnet.properties.subnets[2].id
       }
+      enableNodePublicIp: true // there is no need for public IP but this requires workspace to have private endpoint, so we are leaving it as true
       osType: 'Linux'
-      vmPriority: 'Dedicated'
+      vmPriority: 'Dedicated' // improve startup time by using dedicated VMs
       vmSize: 'STANDARD_D2_V2'
     }
   }
@@ -556,3 +561,5 @@ output aml_job_input_datastore string = aml_workspace_input_datastore.name
 output aml_job_output_datastore string = aml_workspace_output_datastore.name
 output upload_container_name string = storage_container_job_input.name
 output upload_storage_url string = storage_account.properties.primaryEndpoints.blob
+output key_vault_name string = key_vault.name
+output managed_identity_id string = managed_identity.properties.clientId
