@@ -8,7 +8,19 @@ var subnets = [
   'resources'
   'aml'
 ]
+
 var vnet_name = '${prefix}-vnet'
+
+resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-11-01' = [
+  for subnetName in subnets: {
+    name: '${vnet_name}-${subnetName}-nsg'
+    location: location
+    properties: {
+      securityRules: []
+    }
+  }
+]
+
 resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: vnet_name
   location: location
@@ -24,6 +36,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         properties: {
           addressPrefix: '10.0.${i}.0/24'
           privateEndpointNetworkPolicies: (subnetName == 'resources') ? 'NetworkSecurityGroupEnabled' : 'Disabled'
+          networkSecurityGroup: {
+            id: nsgs[i].id
+          }
           delegations: (subnetName == 'aml')
             ? [
                 {
@@ -446,7 +461,7 @@ resource storageblobdatacontributor_user_role_assignment 'Microsoft.Authorizatio
 
 // create aml workspace
 resource aml_workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
-  name: prefix
+  name: '${prefix}-aml'
   location: location
   sku: {
     name: 'Basic'
@@ -456,10 +471,11 @@ resource aml_workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01'
     type: 'SystemAssigned'
   }
   properties: {
+    publicNetworkAccess: 'Enabled'
     friendlyName: prefix
     applicationInsights: app_insights.id
     containerRegistry: container_registry.id
-    description: 'Azure Machine Learning workspace'
+    description: 'Azure Machine Learning workspace for running parallel jobs'
     keyVault: key_vault.id
     storageAccount: storage_account.id
     managedNetwork: {
@@ -468,18 +484,6 @@ resource aml_workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01'
     enableDataIsolation: false
   }
 }
-
-// resource storageblobdatacontributor_aml_role_assignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-//   name: guid(subscription().subscriptionId, aml_workspace.name, 'StorageBlobDataContributor')
-//   scope: storage_account
-//   properties: {
-//     principalId: aml_workspace.identity.principalId
-//     roleDefinitionId: subscriptionResourceId(
-//       'Microsoft.Authorization/roleDefinitions',
-//       'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-//     )
-//   }
-// }
 
 // create aml workspace datasource
 resource aml_workspace_input_datastore 'Microsoft.MachineLearningServices/workspaces/datastores@2024-04-01' = {
@@ -534,14 +538,15 @@ resource aml_compute_cluster 'Microsoft.MachineLearningServices/workspaces/compu
     properties: {
       scaleSettings: {
         minNodeCount: 0
-        maxNodeCount: 1
-        nodeIdleTimeBeforeScaleDown: 'PT120S'
+        maxNodeCount: 3
+        nodeIdleTimeBeforeScaleDown: 'PT3600S' // shut down after 1 hour of inactivity
       }
       subnet: {
         id: vnet.properties.subnets[2].id
       }
+      enableNodePublicIp: true // there is no need for public IP but this requires workspace to have private endpoint, so we are leaving it as true
       osType: 'Linux'
-      vmPriority: 'Dedicated'
+      vmPriority: 'Dedicated' // improve startup time by using dedicated VMs
       vmSize: 'STANDARD_D2_V2'
     }
   }

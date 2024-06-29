@@ -1,11 +1,11 @@
 param (
     [string]$prefix = "amlparallelrun",
-    [string]$groupName = "aml-parallel-run",
     [string]$location = "eastus"
 )
 
 $ErrorActionPreference = "Stop"
 
+$groupName = $prefix
 If (-Not [bool]((az group exists -n $groupName) -eq 'true')) { az group create --name $groupName --location $location }
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to create or verify aml resource group."
