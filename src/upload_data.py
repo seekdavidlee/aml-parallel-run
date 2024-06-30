@@ -32,7 +32,7 @@ with os.scandir(directory_path) as entries:
 
                 content = data.read()
                 # loop 10 times
-                for index in range(10):
+                for index in range(100):
 
                     # Split the filename from its extension and insert the index before the extension
                     name_parts = entry.name.rsplit(".", 1)

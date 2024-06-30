@@ -24,7 +24,7 @@ def init():
     keyvault_secret = SECRET_CLIENT.get_secret("SecretKey1", None)
 
     print(
-        f"SecretKey1: {keyvault_secret.value}, this shows we are able to get secrets from keyvault."
+        f"SecretKey1: {keyvault_secret.value}, this shows we are able to get secrets from keyvault using managed identity."
     )
 
     parser = argparse.ArgumentParser(
