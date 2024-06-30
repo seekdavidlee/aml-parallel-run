@@ -6,7 +6,8 @@ param user_object_id string
 var subnets = [
   'default'
   'resources'
-  'aml'
+  'amlcompute'
+  'amlworkspace'
 ]
 
 var vnet_name = '${prefix}-vnet'
@@ -98,7 +99,7 @@ resource storage_account 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
   properties: {
     accessTier: 'Hot'
-    allowBlobPublicAccess: false
+    allowBlobPublicAccess: false    
     supportsHttpsTrafficOnly: true
     publicNetworkAccess: 'Enabled'
     networkAcls: {

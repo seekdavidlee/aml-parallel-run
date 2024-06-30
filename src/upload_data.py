@@ -22,18 +22,29 @@ blob_service_client = BlobServiceClient(
 # Get a client to interact with the specified container
 container_client = blob_service_client.get_container_client(container_name)
 
-
 # Iterate over files in directory_path
 with os.scandir(directory_path) as entries:
     for entry in entries:
         if entry.is_file():
             file_path = entry.path
-            blob_name = entry.name
             # Upload the file
-            with open(file_path, "rb") as data:
-                # Get a client to interact with the specified blob (file)
-                blob_client = blob_service_client.get_blob_client(
-                    container=container_name, blob=blob_name
-                )
-                blob_client.upload_blob(data, overwrite=True)
-                print(f"File {file_path} uploaded to blob storage as {blob_name}.")
+            with open(file_path, "r") as data:
+
+                content = data.read()
+                # loop 10 times
+                for index in range(10):
+
+                    # Split the filename from its extension and insert the index before the extension
+                    name_parts = entry.name.rsplit(".", 1)
+                    blob_name = (
+                        f"{name_parts[0]}_{index}.{name_parts[1]}"
+                        if len(name_parts) == 2
+                        else f"{entry.name}_{index}"
+                    )
+
+                    # Get a client to interact with the specified blob (file)
+                    blob_client = blob_service_client.get_blob_client(
+                        container=container_name, blob=blob_name
+                    )
+                    blob_client.upload_blob(content, overwrite=True)
+                    print(f"File {file_path} uploaded to blob storage as {blob_name}.")
