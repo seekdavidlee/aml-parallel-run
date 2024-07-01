@@ -78,15 +78,18 @@ env = Environment(
 
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 job_input_path = f"azureml://datastores/{aml_job_input_datastore}/paths/"
-job_output_path = (
-    f"azureml://datastores/{aml_job_output_datastore}/paths/{timestamp}/job"
+job_output_path_1 = (
+    f"azureml://datastores/{aml_job_output_datastore}/paths/{timestamp}/job_1"
+)
+job_output_path_2 = (
+    f"azureml://datastores/{aml_job_output_datastore}/paths/{timestamp}/job_2"
 )
 job_suffix = f"{aml_experiment_name}_{timestamp}"
 
-batch_job = parallel_run_function(
-    name=f"batch_job_{job_suffix}",
-    display_name="Batch job with sample Dataset",
-    description="parallel component for batch job",
+batch_job1 = parallel_run_function(
+    name=f"batch_job1_{job_suffix}",
+    display_name="Batch job 1 with sample Dataset as input",
+    description="parallel component for batch job 1",
     inputs=dict(
         job_data_path=Input(
             type=AssetTypes.URI_FOLDER,
@@ -99,7 +102,46 @@ batch_job = parallel_run_function(
         job_output_path=Output(
             type=AssetTypes.URI_FOLDER,
             mode="upload",
-            path=job_output_path,
+            path=job_output_path_1,
+        ),
+    ),
+    input_data="${{inputs.job_data_path}}",
+    instance_count=aml_job_instance_count,
+    max_concurrency_per_instance=aml_job_concurrency,
+    mini_batch_size="1",
+    mini_batch_error_threshold=1,
+    retry_settings=dict(max_retries=3, timeout=60),
+    logging_level=aml_log_level,
+    is_deterministic=False,
+    environment_variables=dict(
+        KEY_VAULT_NAME=job_key_vault_name, MANAGED_IDENTITY_ID=managed_identity_id
+    ),
+    task=RunFunction(
+        code="code",
+        entry_script="run_job.py",
+        program_arguments="--job_output_path ${{outputs.job_output_path}} "
+        "--resource_monitor_interval 0",
+        environment=env,
+    ),
+)
+
+batch_job2 = parallel_run_function(
+    name=f"batch_job2_{job_suffix}",
+    display_name="Batch job 2 with Job 2 Output as input",
+    description="parallel component for batch job 2",
+    inputs=dict(
+        job_data_path=Input(
+            type=AssetTypes.URI_FOLDER,
+            mode="download",
+            path=job_input_path,
+            description="Files to be processed.",
+        ),
+    ),
+    outputs=dict(
+        job_output_path=Output(
+            type=AssetTypes.URI_FOLDER,
+            mode="upload",
+            path=job_output_path_2,
         ),
     ),
     input_data="${{inputs.job_data_path}}",
@@ -126,10 +168,14 @@ batch_job = parallel_run_function(
 @pipeline(name=timestamp, display_name=f"Job {timestamp}")
 def parallel_in_pipeline():
 
-    batch_job_with_file_data = batch_job()
+    batch_job1_with_file_data = batch_job1()
+    batch_job2_with_file_data = batch_job2(
+        job_data_path=batch_job1_with_file_data.outputs.job_output_path,
+    )
 
     return {
-        "pipeline_job_out_job_result": batch_job_with_file_data.outputs.job_output_path,
+        "pipeline_job1_out_job_result": batch_job1_with_file_data.outputs.job_output_path,
+        "pipeline_job2_out_job_result": batch_job2_with_file_data.outputs.job_output_path,
     }
 
 

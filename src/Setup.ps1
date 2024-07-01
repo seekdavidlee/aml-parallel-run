@@ -29,11 +29,6 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed to deploy the aml resources."
 }
 
-Write-Host "Outputs:"
-$output.properties.outputs.aml_storage_name.value
-$output.properties.outputs.aml_id.value
-$output.properties.outputs.aml_tenant_id.value
-
 $amlWorkspaceName = $output.properties.outputs.aml_workspace_name.value
 $amlComputeName = $output.properties.outputs.aml_compute_name.value
 $amlJobInputDatastore = $output.properties.outputs.aml_job_input_datastore.value
