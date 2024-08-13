@@ -3,6 +3,8 @@ azure-identity==1.16.1
 azure-keyvault-secrets==4.8.0
 azure-monitor-opentelemetry==1.6.0
 azure-storage-blob==12.19.0
+azure-storage-queue==12.11.0
+azure-data-tables==12.5.0
 azureml-mlflow==1.56.0
 numpy==1.26.4
 openai==1.31.0

@@ -11,9 +11,16 @@ import argparse
 
 parser = argparse.ArgumentParser(allow_abbrev=True, description="Run pipeline")
 parser.add_argument("--env_path", type=str, default=0)
+parser.add_argument("--cmd", type=str, default=0)
 
 args, _ = parser.parse_known_args()
 env_path = args.env_path
+cmd = args.cmd
+
+if cmd == 0:
+    cmd = "run"
+elif cmd != "verify_table" and cmd != "verify_queue":
+    raise ValueError(f"Invalid command: {cmd}")
 
 if env_path == 0:
     env_path = "./.env"
@@ -26,6 +33,7 @@ aml_subscription_id = os.getenv("AML_SUBSCRIPTION_ID")
 aml_resource_group_name = os.getenv("AML_RESOURCE_GROUP_NAME")
 aml_workspace_name = os.getenv("AML_WORKSPACE_NAME")
 aml_compute_name = os.getenv("AML_COMPUTE_NAME")
+aml_storage_account_name = os.getenv("AML_STORAGE_ACCOUNT_NAME")
 
 aml_log_level = os.getenv("AML_LOG_LEVEL")
 aml_image_name = os.getenv("AML_IMAGE_NAME")
@@ -38,6 +46,7 @@ print(f"aml_subscription_id={aml_subscription_id}")
 print(f"aml_resource_group_name={aml_resource_group_name}")
 print(f"aml_workspace_name={aml_workspace_name}")
 print(f"aml_compute_name={aml_compute_name}")
+print(f"aml_storage_account_name={aml_storage_account_name}")
 
 print(f"aml_log_level={aml_log_level}")
 print(f"aml_image_name={aml_image_name}")
@@ -72,35 +81,66 @@ ml_client = MLClient(
 env = Environment(image=aml_image_name, conda_file="environments/parallel.yml")
 
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-job_input_path = f"azureml://datastores/{aml_job_input_datastore}/paths/"
-job_output_path_1 = (
-    f"azureml://datastores/{aml_job_output_datastore}/paths/{timestamp}/job_1"
-)
 
-# create a pipeline
-cmd_job = command(
-    name=f"cmd_{timestamp}",
-    description=f"Run {timestamp} command",
-    inputs=dict(
-        job_data_path=Input(
-            type=AssetTypes.URI_FOLDER, mode="download", path=job_input_path
-        )
-    ),
-    outputs=dict(
-        job_output_path=Output(
-            type=AssetTypes.URI_FOLDER, mode="upload", path=job_output_path_1
-        )
-    ),
-    code="./code",  # location of source code
-    command=f"python main.py --job_input_path ${{inputs.job_data_path}} --job_output_path ${{outputs.job_output_path}}",
-    compute=aml_compute_name,
-    environment=env,
-    environment_variables=dict(
-        KEY_VAULT_NAME=job_key_vault_name, MANAGED_IDENTITY_ID=managed_identity_id
-    ),
-    display_name=f"Command job {timestamp}",
-    experiment_name=aml_experiment_name,
-)
+cmd_job : command = None
+
+if cmd == "run":
+    job_input_path = f"azureml://datastores/{aml_job_input_datastore}/paths/"
+    job_output_path_1 = (
+        f"azureml://datastores/{aml_job_output_datastore}/paths/{timestamp}/job_1"
+    )
+
+    cmd_job = command(
+        name=f"cmd_{timestamp}",
+        description=f"Run {timestamp} command",
+        inputs=dict(
+            job_data_path=Input(
+                type=AssetTypes.URI_FOLDER, mode="download", path=job_input_path
+            )
+        ),
+        outputs=dict(
+            job_output_path=Output(
+                type=AssetTypes.URI_FOLDER, mode="upload", path=job_output_path_1
+            )
+        ),
+        code="./code",  # location of source code
+        command=f"python main.py --job_input_path ${{{{inputs.job_data_path}}}} --job_output_path ${{{{outputs.job_output_path}}}}",
+        compute=aml_compute_name,
+        environment=env,
+        environment_variables=dict(
+            KEY_VAULT_NAME=job_key_vault_name, MANAGED_IDENTITY_ID=managed_identity_id
+        ),
+        display_name=f"Command job {timestamp}",
+        experiment_name=aml_experiment_name,
+    )
+elif cmd == "verify_table":
+    cmd_job = command(
+        name=f"cmd_{timestamp}",
+        description=f"Run {timestamp} command",
+        code="./code",  # location of source code
+        command=f"python verify_table.py",
+        compute=aml_compute_name,
+        environment=env,
+        environment_variables=dict(
+            STORAGE_ACCOUNT_NAME=aml_storage_account_name, MANAGED_IDENTITY_ID=managed_identity_id
+        ),
+        display_name=f"Command job {timestamp}",
+        experiment_name=aml_experiment_name,
+    )
+elif cmd == "verify_queue":
+    cmd_job = command(
+        name=f"cmd_{timestamp}",
+        description=f"Run {timestamp} command",
+        code="./code",  # location of source code
+        command=f"python verify_queue.py",
+        compute=aml_compute_name,
+        environment=env,
+        environment_variables=dict(
+            STORAGE_ACCOUNT_NAME=aml_storage_account_name, MANAGED_IDENTITY_ID=managed_identity_id
+        ),
+        display_name=f"Command job {timestamp}",
+        experiment_name=aml_experiment_name,
+    )
 
 # create a pipeline
 pipeline_job = ml_client.jobs.create_or_update(cmd_job)
