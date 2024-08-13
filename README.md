@@ -51,15 +51,23 @@ This script will create some test data for the AML parallel job to use.
 python .\upload_data.py
 ```
 
-## Run a Job
+## Run a Parallel Job
 
-To run an job, you can use the `run` python script. It uses the `.env` file created in a previous step to run. It will schedule a pipeline to be executed in Azure Machine Learning.
+To run a Parallel job, you can use the `run.py` python script. It uses the `.env` file created in a previous step to run. It will schedule a job to be executed in Azure Machine Learning.
 
 ```bash
 python .\run.py
 ```
 
 A link will be present at the end. Click on the link to navigate to your job. You can change the `.env` parameters. For example you may consider upping the `AML_JOB_CONCURRENCY` to 2 and running again.
+
+## Run a Command Job
+
+To run a Command job, you can use the `runcmd.py` python script. It uses the `.env` file created in a previous step to run. It will schedule a job to be executed in Azure Machine Learning.
+
+```bash
+python .\runcmd.py
+```
 
 ## Take away
 
