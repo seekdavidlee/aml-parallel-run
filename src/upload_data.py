@@ -1,3 +1,4 @@
+import argparse
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from pathlib import Path
@@ -6,7 +7,18 @@ from dotenv import load_dotenv
 
 directory_path = "../data"
 
-dotenv_path = Path("./.env")
+parser = argparse.ArgumentParser(allow_abbrev=True, description="Run upload data")
+parser.add_argument("--env_path", type=str, default=0)
+
+args, _ = parser.parse_known_args()
+env_path = args.env_path
+
+if env_path == 0:
+    env_path = "./.env"
+
+print(f"env_path: {env_path}")
+dotenv_path = Path(env_path)
+
 load_dotenv(dotenv_path=dotenv_path, override=True)
 container_name = os.getenv("UPLOAD_CONTAINER_NAME")
 storage_url = os.getenv("UPLOAD_STORAGE_URL")
