@@ -1,6 +1,8 @@
 param (
     [Parameter(Mandatory = $true)][string]$prefix,
-    [string]$location = "eastus"
+    [Parameter(Mandatory = $false)][string]$location = "eastus",
+    [Parameter(Mandatory = $true)][string]$deployment,
+    [switch]$deploymentOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,6 +10,10 @@ $ErrorActionPreference = "Stop"
 if (!$prefix) {
     throw "Prefix is required."
 }
+
+# if ($deployment -ne "aml" -and $deployment -ne "aml_managed") {
+#     throw "deployment must be aml or aml_managed."
+# }
 
 $groupName = $prefix
 If (-Not [bool]((az group exists -n $groupName) -eq 'true')) { az group create --name $groupName --location $location }
@@ -23,10 +29,15 @@ $userObjectId = az ad signed-in-user show --query id -o tsv
 $deploymentName = Get-Date -Format "yyyyMMddHHmmss"
 $output = az deployment group create --name $deploymentName `
     --resource-group $groupName `
-    --template-file deployments/aml.bicep `
+    --template-file "deployments/$deployment.bicep" `
     --parameters location=$location prefix=$prefix ip_list="['$ipAddress']" user_object_id=$userObjectId | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to deploy the aml resources."
+}
+
+if ($deploymentOnly) {
+    Write-Host "Deployment completed."
+    return
 }
 
 $amlWorkspaceName = $output.properties.outputs.aml_workspace_name.value
