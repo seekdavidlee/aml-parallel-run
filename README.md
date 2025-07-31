@@ -33,14 +33,24 @@ Navigate to the src directory and follow the steps below:
 
 Activate virtual environment
 
-```bash
-venv\Scripts\activate
+### On Windows (PowerShell)
+
+```powershell
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
 ```
 
-Install python dependencies.
+### On macOS/Linux
 
 ```bash
-pip install -r requirements.txt
+# Create virtual environment
+python3 -m venv venv
+
+# Activate virtual environment
+source venv/bin/activate
 ```
 
 ## Stage test data
