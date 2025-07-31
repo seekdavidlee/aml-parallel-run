@@ -2,13 +2,13 @@
 
 This repo is to demonstrate running jobs privately in AML. It contains the infra code to setup Azure Machine Learning (AML) dependencies as private resources and run AML jobs in a private environment. It contains a setup script which you can use to run AML jobs in parallel. 
 
-There are 2 seperate components of AML, the AML workspace and AML Compute. We can think of AML workspace as managing AML dependencies such as setting up Datasources, Computes, etc. When we are actually running pipeline jobs, those jobs are running as AML Compute and in our case, as Compute Clusters. In this repo, we are only ensuring the job is running privately, not the AML workspace.
+There are 2 separate components of AML, the AML workspace and AML Compute. We can think of AML workspace as managing AML dependencies such as setting up Datasources, Computes, etc. When we are actually running pipeline jobs, those jobs are running as AML Compute and in our case, as Compute Clusters. In this repo, we are only ensuring the job is running privately, not the AML workspace.
 
 ## Setup Notes
 
 * There are 4 subnets created, only the `resources` and `amlcompute` subnets are used in this demo.
 * The `resources` subnet contains the private endpoints for Azure Container Registry, Azure Storage, and Azure Key Vault.
-* The `amlcompute` subnet is used to host the AML Compute Cluster where VMs will be created and will have access to `resources` subnet to access the privae endpoints.
+* The `amlcompute` subnet is used to host the AML Compute Cluster where VMs will be created and will have access to `resources` subnet to access the private endpoints.
 * Because your Azure resources have private endpoints, as a user, you would normally want to connect to a VNET in order to access those resources. However this would require additional network setup such as a point-to-site VPN. For the purpose of this demo, your IP is simply added to the firewall.
 * Most setup work are done in the `aml.bicep` script. However, there are some setup that is done after all resources have been provisioned. This is done as part of the `Setup.ps1` script. You can reference these scripts for the setup details.
 
@@ -19,7 +19,7 @@ There are 2 seperate components of AML, the AML workspace and AML Compute. We ca
 
 ## Setup AML Environment
 
-The `-prefix` parameter is where you would supply a globally unqiue name. This is how your Azure resources will be named.
+The `-prefix` parameter is where you would supply a globally unique name. This is how your Azure resources will be named.
 
 ```powershell
 .\Setup.ps1 -prefix <YOUR_PREFIX>
