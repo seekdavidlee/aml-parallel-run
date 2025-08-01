@@ -17,16 +17,6 @@ There are 2 separate components of AML, the AML workspace and AML Compute. We ca
 * You must have rights to perform role assignments. 
 * Login to your Azure Subscription via Azure CLI.
 
-## Setup AML Environment
-
-The `-prefix` parameter is where you would supply a globally unique name. This is how your Azure resources will be named.
-
-```powershell
-.\Setup.ps1 -prefix <YOUR_PREFIX>
-```
-
-When this is completed, you will also noticed an environment `.env` file created. There are no secrets here. It contains the details for us to kick off a job. 
-
 ## Python Setup
 
 Navigate to the src directory and follow the steps below:
@@ -52,6 +42,22 @@ python3 -m venv venv
 # Activate virtual environment
 source venv/bin/activate
 ```
+
+### Install Dependencies
+
+```powershell
+pip install -r requirements.txt
+```
+
+## Setup AML Environment
+
+The `-prefix` parameter is where you would supply a globally unique name. This is how your Azure resources will be named.
+
+```powershell
+.\Setup.ps1 -prefix <YOUR_PREFIX>
+```
+
+When this is completed, you will also noticed an environment `.env` file created. There are no secrets here. It contains the details for us to kick off a job.
 
 ## Stage test data
 

@@ -1,4 +1,4 @@
-azure-ai-ml
+azure-ai-ml==1.12.1
 azure-identity==1.16.1
 azure-keyvault-secrets==4.8.0
 azure-monitor-opentelemetry==1.6.0

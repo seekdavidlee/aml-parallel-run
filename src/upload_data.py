@@ -10,14 +10,21 @@ dotenv_path = Path("./.env")
 load_dotenv(dotenv_path=dotenv_path, override=True)
 container_name = os.getenv("UPLOAD_CONTAINER_NAME")
 storage_url = os.getenv("UPLOAD_STORAGE_URL")
+storage_connection_string = os.getenv("STORAGE_CONNECTION_STRING")
 
 print(f"UPLOAD_CONTAINER_NAME={container_name}")
 print(f"UPLOAD_STORAGE_URL={storage_url}")
 
-default_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
-blob_service_client = BlobServiceClient(
-    account_url=storage_url, credential=default_credential
-)
+# Use connection string if available, otherwise use DefaultAzureCredential
+if storage_connection_string:
+    print("Using Storage connection string for authentication")
+    blob_service_client = BlobServiceClient.from_connection_string(storage_connection_string)
+else:
+    print("Using DefaultAzureCredential for authentication")
+    default_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
+    blob_service_client = BlobServiceClient(
+        account_url=storage_url, credential=default_credential
+    )
 
 # Get a client to interact with the specified container
 container_client = blob_service_client.get_container_client(container_name)
